@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ka">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0fb7c3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Acoustics">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Kaki's Acoustics</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/app-icon.png">
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="segmented" aria-label="Language">
+          <button id="lang-ka" class="active" type="button">GEO</button>
+          <button id="lang-en" type="button">EN</button>
+        </div>
+        <h1 data-i18n="title">აკუსტიკის კალკულატორი</h1>
+        <div class="toolbar-actions">
+          <button id="clear-btn" class="icon-btn danger" type="button" aria-label="Clear">⌫</button>
+          <button id="export-btn" class="icon-btn" type="button" aria-label="Export">⇧</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="card">
+          <details>
+            <summary><span data-i18n="manual">მომხმარებლის გზამკვლევი</span></summary>
+            <ol class="manual-list">
+              <li data-i18n="guide1">ჩაწერე პროექტის სახელი, თუ გინდა PDF-ში გამოჩნდეს.</li>
+              <li data-i18n="guide2">აირჩიე ჭერის ფორმა და შეიყვანე შესაბამისი ზომები.</li>
+              <li data-i18n="guide3">კარისა და ფანჯრის ფართობები კედლის ფართობს ავტომატურად აკლდება.</li>
+              <li data-i18n="guide4">მასალებში ჯერ აირჩიე ვარიანტი; არჩეული არ არის ნიშნავს 0 შთანთქმას.</li>
+              <li data-i18n="guide5">თუ ზედაპირზე რამდენიმე მასალაა, დაამატე დამატებითი რიგი.</li>
+              <li data-i18n="guide6">შედარება გამოიყენე მეორე ჭერის/აბსორბერის ვარიანტის შესაფასებლად.</li>
+              <li data-i18n="guide7">PDF-ისთვის გამოიყენე გაზიარების ღილაკი.</li>
+            </ol>
+          </details>
+        </section>
+
+        <section class="card">
+          <h2 data-i18n="roomDimensions">1. ოთახის ზომები</h2>
+          <p class="hint" data-i18n="roomHint">აქ შეყვანილი მონაცემებით ავტომატურად ითვლება იატაკის, კედლების, ჭერის ფართობი და ოთახის მოცულობა.</p>
+
+          <label class="field full">
+            <span data-i18n="project">პროექტი</span>
+            <input id="project" type="text" autocomplete="off" data-i18n-placeholder="projectName" placeholder="პროექტის სახელი">
+          </label>
+
+          <h3 data-i18n="ceilingShape">ჭერის ფორმა</h3>
+          <div id="shape-buttons" class="choice-grid"></div>
+          <div class="diagram-card">
+            <img id="shape-image" src="assets/shape_flat.png" alt="">
+          </div>
+
+          <h3 data-i18n="dimensions">ზომები</h3>
+          <div id="dimensions" class="form-grid"></div>
+
+          <div class="metrics">
+            <div><span data-i18n="totalFloor">იატაკის სრული ფართობი</span><strong id="floor-area">0 m²</strong></div>
+            <div><span data-i18n="totalWall">კედლების სრული ფართობი</span><strong id="wall-area">0 m²</strong></div>
+            <div><span data-i18n="totalCeiling">ჭერის სრული ფართობი</span><strong id="ceiling-area">0 m²</strong></div>
+            <div><span data-i18n="volume">მოცულობა</span><strong id="volume">0 m³</strong></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 data-i18n="materials">2. მასალები</h2>
+          <p class="hint" data-i18n="materialHint">თითოეულ ზედაპირზე აირჩიე მასალა. დამატება გამოიყენე როცა ერთი ზედაპირი რამდენიმე მასალისგან შედგება.</p>
+          <div id="material-sections"></div>
+
+          <details class="subpanel">
+            <summary data-i18n="coefficients">მასალის კოეფიციენტები</summary>
+            <div id="coefficients-table" class="coefficients"></div>
+          </details>
+
+          <details class="subpanel">
+            <summary data-i18n="customMaterial">საკუთარი მასალა</summary>
+            <label class="field full">
+              <span data-i18n="description">აღწერა</span>
+              <input id="custom-name" type="text" autocomplete="off">
+            </label>
+            <div id="custom-coefficients" class="form-grid"></div>
+          </details>
+
+          <label class="toggle-row">
+            <input id="alternative-enabled" type="checkbox">
+            <span data-i18n="comparisonCalc">შედარებითი გამოთვლა</span>
+          </label>
+          <div id="alternative-panel" class="comparison-panel hidden"></div>
+        </section>
+
+        <section class="card">
+          <h2 data-i18n="results">3. შედეგები</h2>
+          <p class="hint" data-i18n="resultHint">რევერბერაციის დრო T აჩვენებს რამდენ ხანს გრძელდება ხმა ოთახში. შთანთქმის ფართობი A აჩვენებს რამდენად შთანთქავს სივრცე ხმას.</p>
+          <div id="warning" class="warning hidden"></div>
+          <div id="result-type-buttons" class="choice-grid two"></div>
+          <button id="export-btn-secondary" class="primary-btn" type="button" data-i18n="exportPdf">PDF ექსპორტი</button>
+          <div id="results-output"></div>
+        </section>
+      </main>
+    </div>
+
+    <template id="number-template">
+      <label class="field number-field">
+        <span></span>
+        <div class="number-wrap">
+          <input inputmode="decimal" type="text" autocomplete="off">
+          <em></em>
+        </div>
+      </label>
+    </template>
+
+    <script src="materials.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

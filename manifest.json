@@ -1,0 +1,18 @@
+{
+  "name": "Kaki's Acoustics",
+  "short_name": "Acoustics",
+  "description": "Offline acoustics calculator",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#0fb7c3",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "assets/app-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
