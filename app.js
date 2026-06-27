@@ -217,10 +217,58 @@ function fmt(value) {
 }
 
 function sanitizeName(name) {
+  if (state.language === "en") {
+    if (name === "საკუთარი მასალა") return "Custom material";
+    return name
+      .replaceAll("Troldtekt", "Acoustic panel")
+      .replaceAll("troldtekt", "acoustic panel")
+      .replaceAll("TROLDTEKT", "ACOUSTIC PANEL");
+  }
+
+  const exactNames = {
+    "Linoleum on concrete": "ლინოლეუმი ბეტონზე",
+    "Parquet on concrete": "პარკეტი ბეტონზე",
+    "Concrete or tiles on concrete": "ბეტონი ან ფილები ბეტონზე",
+    "Parquet on timber construction": "პარკეტი ხის კონსტრუქციაზე",
+    "Water (Swimming pool)": "წყალი (საცურაო აუზი)",
+    "Carpet on concrete": "ხალიჩა ბეტონზე",
+    "Bare wall": "შიშველი კედელი",
+    "Concrete, painted": "ბეტონი, შეღებილი",
+    "Concrete, unpainted": "ბეტონი, შეუღებავი",
+    "Gypsum 2 x 12.5 mm": "თაბაშირი 2 x 12.5 მმ",
+    "Plastered walls": "შელესილი კედლები",
+    "Door, light": "კარი, მსუბუქი",
+    "Door, heavy": "კარი, მძიმე",
+    "Window (3+12+3 mm)": "ფანჯარა (3+12+3 მმ)",
+    "Curtains, 340 g/m2": "ფარდა, 340 გ/მ2",
+    "Curtains, 600 g/m2": "ფარდა, 600 გ/მ2",
+    "Window (3 mm)": "ფანჯარა (3 მმ)",
+    "Wooden ceiling": "ხის ჭერი",
+    "საკუთარი მასალა": "საკუთარი მასალა"
+  };
+  if (exactNames[name]) return exactNames[name];
+
   return name
-    .replaceAll("Troldtekt", "Acoustic panel")
-    .replaceAll("troldtekt", "acoustic panel")
-    .replaceAll("TROLDTEKT", "ACOUSTIC PANEL");
+    .replaceAll("Concrete", "ბეტონი")
+    .replaceAll("Troldtekt", "აკუსტიკური პანელი")
+    .replaceAll("troldtekt", "აკუსტიკური პანელი")
+    .replaceAll("painted", "შეღებილი")
+    .replaceAll("unpainted", "შეუღებავი")
+    .replaceAll("Gypsum", "თაბაშირი")
+    .replaceAll("Cavity", "ღრუ")
+    .replaceAll("mineral wool", "მინერალური ბამბა")
+    .replaceAll("Acoustic fleece", "აკუსტიკური ფლისი")
+    .replaceAll("baffles", "ბაფლები")
+    .replaceAll("Hanging height", "დაკიდების სიმაღლე")
+    .replaceAll("Row distance", "რიგებს შორის მანძილი")
+    .replaceAll("Tiles", "ფილები")
+    .replaceAll("Line", "ხაზი")
+    .replaceAll("line", "ხაზი")
+    .replaceAll("v-ხაზი", "v-ხაზი")
+    .replaceAll("fine", "წვრილი")
+    .replaceAll("ultraწვრილი", "ულტრა წვრილი")
+    .replaceAll("extreme წვრილი", "ექსტრა წვრილი")
+    .replaceAll("mm", "მმ");
 }
 
 function materialOptions(kind) {
@@ -571,6 +619,20 @@ function missingMaterials(c) {
   if (n(state.doorArea) > 0 && state.doorSelection < 0) missing.push(t("door"));
   if (n(state.windowArea) > 0 && state.windowSelection < 0) missing.push(t("window"));
   if (c.effectiveCeiling > 0 && state.ceilingSelection < 0) missing.push(t("ceiling"));
+  state.extraFloorRows.forEach((row, index) => {
+    if (n(row.area) > 0 && Number(row.selection) < 0) missing.push(`${t("extraFloor")} ${index + 1}`);
+  });
+  state.extraWallRows.forEach((row, index) => {
+    if (n(row.area) > 0 && Number(row.selection) < 0) missing.push(`${t("extraWall")} ${index + 1}`);
+  });
+  state.extraCeilingRows.forEach((row, index) => {
+    if (n(row.area) > 0 && Number(row.selection) < 0) missing.push(`${t("extraCeiling")} ${index + 1}`);
+  });
+  state.extraAbsorberRows.forEach((row, index) => {
+    if (n(row.area) > 0 && Number(row.selection) < 0) missing.push(`${t("absorbers")} ${index + 1}`);
+  });
+  if (state.alternativeEnabled && c.altEffectiveCeiling > 0 && state.alternativeCeilingSelection < 0) missing.push(t("comparisonCeiling"));
+  if (state.alternativeEnabled && state.alternativeAbsorberEnabled && c.altAbsorberArea > 0 && state.alternativeAbsorberSelection < 0) missing.push(t("comparisonAbsorber"));
   return missing;
 }
 
@@ -659,8 +721,51 @@ function comparisonSummary(c) {
   </div>`;
 }
 
+function reportTable(title, values, suffix) {
+  return `<table class="report-table">
+    <tr><th>${title}</th>${freqs.map(f => `<th>${f} Hz</th>`).join("")}<th>${t("average125")}</th><th>${t("average250")}</th></tr>
+    <tr><td></td>${values.map(v => `<td>${fmt(v)} ${suffix}</td>`).join("")}<td>${fmt(average(values))}</td><td>${fmt(average(values.slice(1)))}</td></tr>
+  </table>`;
+}
+
+function buildReport() {
+  const c = computed();
+  const suffix = state.language === "en" ? "sec" : "წმ";
+  const project = state.project.trim() || "Kaki's Acoustics";
+  const report = document.getElementById("print-report");
+  report.innerHTML = `
+    <article class="report-page">
+      <header class="report-header">
+        <div>
+          <h2>${t("report")}</h2>
+          <p>${project}</p>
+        </div>
+        <div class="report-logo">KA</div>
+      </header>
+      <div class="report-grid">
+        <div class="report-metric"><span>${t("totalFloor")}</span><strong>${fmt(floorArea())} m²</strong></div>
+        <div class="report-metric"><span>${t("totalWall")}</span><strong>${fmt(wallArea())} m²</strong></div>
+        <div class="report-metric"><span>${t("totalCeiling")}</span><strong>${fmt(ceilingArea())} m²</strong></div>
+        <div class="report-metric"><span>${t("volume")}</span><strong>${fmt(volume())} m³</strong></div>
+      </div>
+      <h3>${t("reverberation")}</h3>
+      ${reportTable(t("calculation"), c.reverberation, suffix)}
+      ${chartSvg(c.reverberation, state.alternativeEnabled ? c.altReverberation : null)}
+      <div class="result-summary">
+        <div class="summary-box"><span>${t("average125")}</span><strong>${fmt(average(c.reverberation))} ${suffix}</strong></div>
+        <div class="summary-box"><span>${t("average250")}</span><strong>${fmt(average(c.reverberation.slice(1)))} ${suffix}</strong></div>
+      </div>
+      ${state.alternativeEnabled ? `<h3>${t("comparison")}</h3>${reportTable(t("comparison"), c.altReverberation, suffix)}${comparisonSummary(c)}` : ""}
+      <h3>${t("absorption")}</h3>
+      ${reportTable(t("calculation"), c.absorption, "m² Sab")}
+    </article>
+  `;
+}
+
 function exportPdf() {
-  window.print();
+  buildReport();
+  document.body.classList.add("printing");
+  setTimeout(() => window.print(), 50);
 }
 
 function clearAll() {
@@ -676,6 +781,7 @@ document.getElementById("clear-btn").onclick = clearAll;
 document.getElementById("export-btn").onclick = exportPdf;
 document.getElementById("export-btn-secondary").onclick = exportPdf;
 document.getElementById("alternative-enabled").onchange = e => setState("alternativeEnabled", e.target.checked);
+window.addEventListener("afterprint", () => document.body.classList.remove("printing"));
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./service-worker.js");
