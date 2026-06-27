@@ -611,15 +611,17 @@ function renderAlternative() {
   panel.classList.toggle("hidden", !state.alternativeEnabled);
   if (!state.alternativeEnabled) return;
   const c = computed();
-  panel.innerHTML = `<h3>${t("comparison")}</h3>`;
+  panel.innerHTML = `<h3>${t("comparison")}</h3><p>${state.language === "en" ? "Same room with a different ceiling or absorber option." : "იგივე ოთახი სხვა ჭერის ან აბსორბერის ვარიანტით."}</p>`;
   panel.appendChild(renderMaterialBlock(t("comparisonCeiling"), "ceiling", "alternativeCeilingSelection", c.altEffectiveCeiling, null, null, "altEffectiveCeiling"));
   const toggle = document.createElement("label");
-  toggle.className = "toggle-row";
-  toggle.innerHTML = `<span>${t("comparisonAbsorber")}</span><input type="checkbox" ${state.alternativeAbsorberEnabled ? "checked" : ""}>`;
+  toggle.className = "switch-row comparison-switch";
+  toggle.innerHTML = `<input type="checkbox" ${state.alternativeAbsorberEnabled ? "checked" : ""}><span>${t("comparisonAbsorber")}</span>`;
   toggle.querySelector("input").onchange = e => setState("alternativeAbsorberEnabled", e.target.checked);
   panel.appendChild(toggle);
   if (state.alternativeAbsorberEnabled) {
-    panel.appendChild(makeNumber(t("comparisonAbsorberArea"), "alternativeAbsorberArea", "m²"));
+    const areaField = makeNumber(t("comparisonAbsorberArea"), "alternativeAbsorberArea", "m²");
+    areaField.classList.add("comparison-number");
+    panel.appendChild(areaField);
     panel.appendChild(renderMaterialBlock(t("comparisonAbsorber"), "ceiling", "alternativeAbsorberSelection", c.altAbsorberArea, null, null, "altAbsorberArea"));
   }
 }

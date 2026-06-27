@@ -287,7 +287,6 @@ input:focus, select:focus {
 
 .metrics div,
 .material-row,
-.toggle-row,
 .result-summary {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -425,22 +424,56 @@ input:focus, select:focus {
   list-style-position: outside;
 }
 
-.toggle-row {
+.switch-row {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
   min-height: 50px;
   margin-top: 12px;
   font-weight: 500;
+  max-width: 100%;
 }
 
-.toggle-row input {
+.switch-row input {
   width: 26px;
   min-height: 26px;
+  margin: 0;
+  flex: none;
 }
 
 .comparison-panel {
-  margin-top: 10px;
-  padding: 12px;
+  margin-top: 12px;
+  padding: 14px;
   border-radius: 8px;
   background: rgba(16, 185, 198, 0.08);
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(16, 185, 198, 0.12);
+}
+
+.comparison-panel h3 {
+  margin: 0;
+}
+
+.comparison-panel > p {
+  margin: -6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.comparison-panel .material-block {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.comparison-panel .comparison-switch {
+  margin-top: 0;
+}
+
+.comparison-number {
+  margin: 0;
 }
 
 .table-wrap {
