@@ -216,6 +216,15 @@ function fmt(value) {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
 }
 
+function esc(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function sanitizeName(name) {
   if (state.language === "en") {
     if (name === "საკუთარი მასალა") return "Custom material";
@@ -728,26 +737,76 @@ function reportTable(title, values, suffix) {
   </table>`;
 }
 
+function selectedMaterialName(kind, selection) {
+  const material = materialOptions(kind)[selection];
+  return material ? sanitizeName(material.name) : t("select");
+}
+
+function reportMaterialRows(c) {
+  const rows = [
+    [t("floor"), c.primaryFloor, selectedMaterialName("floor", state.floorSelection)],
+    [t("wall"), c.primaryWall, selectedMaterialName("wall", state.wallSelection)],
+    [t("ceiling"), c.effectiveCeiling, selectedMaterialName("ceiling", state.ceilingSelection)]
+  ];
+
+  if (n(state.doorArea) > 0) rows.push([t("door"), n(state.doorArea), selectedMaterialName("door", state.doorSelection)]);
+  if (n(state.windowArea) > 0) rows.push([t("window"), n(state.windowArea), selectedMaterialName("window", state.windowSelection)]);
+
+  state.extraFloorRows.forEach((row, index) => {
+    if (n(row.area) > 0) rows.push([`${t("extraFloor")} ${index + 1}`, n(row.area), selectedMaterialName("floor", row.selection)]);
+  });
+  state.extraWallRows.forEach((row, index) => {
+    if (n(row.area) > 0) rows.push([`${t("extraWall")} ${index + 1}`, n(row.area), selectedMaterialName("wall", row.selection)]);
+  });
+  state.extraCeilingRows.forEach((row, index) => {
+    if (n(row.area) > 0) rows.push([`${t("extraCeiling")} ${index + 1}`, n(row.area), selectedMaterialName("ceiling", row.selection)]);
+  });
+  state.extraAbsorberRows.forEach((row, index) => {
+    if (n(row.area) > 0) rows.push([`${t("absorbers")} ${index + 1}`, n(row.area), selectedMaterialName("ceiling", row.selection)]);
+  });
+
+  return `<table class="report-table report-materials">
+    <tr><th>${state.language === "en" ? "Surface" : "ზედაპირი"}</th><th>${t("area")}</th><th>${t("materials")}</th></tr>
+    ${rows.map(row => `<tr><td>${esc(row[0])}</td><td>${fmt(row[1])} m²</td><td>${esc(row[2])}</td></tr>`).join("")}
+  </table>`;
+}
+
 function buildReport() {
   const c = computed();
   const suffix = state.language === "en" ? "sec" : "წმ";
   const project = state.project.trim() || "Kaki's Acoustics";
+  const intro = state.language === "en"
+    ? "This acoustics report is generated from the values entered in the calculator. The calculations are based on room volume, surface areas and the selected absorption coefficients."
+    : "ეს აკუსტიკის ანგარიში შექმნილია კალკულატორში შეყვანილი მონაცემებით. გამოთვლა ეფუძნება ოთახის მოცულობას, ზედაპირების ფართობებს და არჩეული მასალების შთანთქმის კოეფიციენტებს.";
   const report = document.getElementById("print-report");
   report.innerHTML = `
     <article class="report-page">
       <header class="report-header">
         <div>
           <h2>${t("report")}</h2>
-          <p>${project}</p>
+          <p>${esc(project)}</p>
         </div>
         <div class="report-logo">KA</div>
       </header>
+      <p class="report-intro">${intro}</p>
+      <div class="report-room">
+        <div class="report-image"><img src="assets/${shapeAssets[state.shape]}" alt=""></div>
+        <div class="report-grid">
+          <div class="report-metric"><span>${t("ceilingShape")}</span><strong>${t("shapes")[state.shape]}</strong></div>
+          <div class="report-metric"><span>${t("length")}</span><strong>${fmt(n(state.length))} m</strong></div>
+          <div class="report-metric"><span>${t("width")}</span><strong>${fmt(n(state.width))} m</strong></div>
+          <div class="report-metric"><span>${state.shape === 1 || state.shape === 2 ? t("height1") : t("height")}</span><strong>${fmt(n(state.height1))} m</strong></div>
+          ${state.shape === 1 || state.shape === 2 ? `<div class="report-metric"><span>${t("height2")}</span><strong>${fmt(n(state.height2))} m</strong></div>` : ""}
+        </div>
+      </div>
       <div class="report-grid">
         <div class="report-metric"><span>${t("totalFloor")}</span><strong>${fmt(floorArea())} m²</strong></div>
         <div class="report-metric"><span>${t("totalWall")}</span><strong>${fmt(wallArea())} m²</strong></div>
         <div class="report-metric"><span>${t("totalCeiling")}</span><strong>${fmt(ceilingArea())} m²</strong></div>
         <div class="report-metric"><span>${t("volume")}</span><strong>${fmt(volume())} m³</strong></div>
       </div>
+      <h3>${t("materials")}</h3>
+      ${reportMaterialRows(c)}
       <h3>${t("reverberation")}</h3>
       ${reportTable(t("calculation"), c.reverberation, suffix)}
       ${chartSvg(c.reverberation, state.alternativeEnabled ? c.altReverberation : null)}
@@ -755,7 +814,7 @@ function buildReport() {
         <div class="summary-box"><span>${t("average125")}</span><strong>${fmt(average(c.reverberation))} ${suffix}</strong></div>
         <div class="summary-box"><span>${t("average250")}</span><strong>${fmt(average(c.reverberation.slice(1)))} ${suffix}</strong></div>
       </div>
-      ${state.alternativeEnabled ? `<h3>${t("comparison")}</h3>${reportTable(t("comparison"), c.altReverberation, suffix)}${comparisonSummary(c)}` : ""}
+      ${state.alternativeEnabled ? `<h3>${t("comparison")}</h3>${comparisonSummary(c)}${reportTable(t("comparison"), c.altReverberation, suffix)}` : ""}
       <h3>${t("absorption")}</h3>
       ${reportTable(t("calculation"), c.absorption, "m² Sab")}
     </article>

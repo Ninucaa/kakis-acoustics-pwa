@@ -452,6 +452,13 @@ td:first-child, th:first-child {
   color: #555;
 }
 
+.report-intro {
+  margin: 0;
+  color: #4b4f56;
+  line-height: 1.45;
+  font-size: 13px;
+}
+
 .report-logo {
   display: grid;
   place-items: center;
@@ -467,6 +474,30 @@ td:first-child, th:first-child {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
+}
+
+.report-room {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.report-image {
+  display: grid;
+  place-items: center;
+  min-height: 148px;
+  border: 1px solid #d8dce2;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.report-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 165px;
+  object-fit: contain;
 }
 
 .report-metric {
@@ -502,6 +533,11 @@ td:first-child, th:first-child {
   border: 1px solid #d8dce2;
   padding: 8px;
   font-size: 12px;
+}
+
+.report-materials td:last-child,
+.report-materials th:last-child {
+  text-align: left;
 }
 
 .result-summary {
@@ -573,8 +609,12 @@ td:first-child, th:first-child {
   .report-page {
     break-after: page;
     padding: 0;
+    gap: 13px;
   }
   .chart {
-    height: 220px;
+    height: 205px;
+  }
+  .report-room {
+    grid-template-columns: 190px 1fr;
   }
 }
