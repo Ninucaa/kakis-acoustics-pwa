@@ -193,7 +193,8 @@ const defaults = {
   alternativeAbsorberArea: "",
   alternativeAbsorberSelection: -1,
   customName: "",
-  customValues: ["", "", "", "", "", ""]
+  customValues: ["", "", "", "", "", ""],
+  openExtraPanels: []
 };
 
 let state = loadState();
@@ -396,6 +397,17 @@ function setState(key, value) {
   render();
 }
 
+function setPanelOpen(key, isOpen) {
+  const panels = new Set(state.openExtraPanels || []);
+  if (isOpen) {
+    panels.add(key);
+  } else {
+    panels.delete(key);
+  }
+  state.openExtraPanels = [...panels];
+  saveState();
+}
+
 function bindInput(id, key) {
   const el = document.getElementById(id);
   el.value = state[key] ?? "";
@@ -520,6 +532,8 @@ function renderMaterialBlock(title, kind, key, area, extraTitle, rowsKey, areaKe
 function extraRows(title, kind, key) {
   const wrap = document.createElement("details");
   wrap.className = "subpanel";
+  wrap.open = (state.openExtraPanels || []).includes(key);
+  wrap.addEventListener("toggle", () => setPanelOpen(key, wrap.open));
   const summary = document.createElement("summary");
   summary.textContent = title;
   wrap.appendChild(summary);
@@ -557,7 +571,10 @@ function extraRows(title, kind, key) {
   add.type = "button";
   add.className = "small-btn";
   add.textContent = t("add");
-  add.onclick = () => {
+  add.onclick = event => {
+    event.preventDefault();
+    event.stopPropagation();
+    setPanelOpen(key, true);
     state[key].push({area: "", selection: -1});
     setState(key, state[key]);
   };
