@@ -1,5 +1,5 @@
 const STORAGE_KEY = "kakis-acoustics-pwa-state-v1";
-const APP_VERSION = "26";
+const APP_VERSION = "27";
 const freqs = ["63", "125", "250", "500", "1000", "2000", "4000", "8000"];
 const sourceFreqs = ["125", "250", "500", "1000", "2000", "4000"];
 const shapeAssets = ["shape_flat.png", "shape_vaulted.png", "shape_raked.png", "shape_arbitrary.png"];
@@ -869,11 +869,14 @@ function reportValue(label, value, unit = "") {
 }
 
 function buildReport() {
+  document.getElementById("print-report").innerHTML = buildReportMarkup();
+}
+
+function buildReportMarkup() {
   const c = computed();
   const suffix = state.language === "en" ? "sec" : "წმ";
   const project = state.project.trim() || "Kaki's Acoustics";
-  const report = document.getElementById("print-report");
-  report.innerHTML = `
+  return `
     <article class="report-page calculation-page">
       <header class="pdf-brand">
         <strong>Kaki's Acoustics</strong>
@@ -930,11 +933,82 @@ function buildReport() {
   `;
 }
 
+function printDocumentCss() {
+  return `
+    @page { size: A4; margin: 8mm; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #fff; color: #111; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { width: 100%; font-size: 10.5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .report-page { width: 100%; max-width: 100%; page-break-after: always; break-after: page; background: #fff; overflow: visible; }
+    .report-page:last-child { page-break-after: auto; break-after: auto; }
+    .pdf-brand { display: grid; gap: 1px; justify-items: end; text-align: right; margin-bottom: 3mm; }
+    .pdf-brand strong { font-size: 15px; font-weight: 650; }
+    .pdf-brand span { color: #777; font-size: 9px; }
+    .calculation-page h1 { margin: 3mm 0 5mm; font-size: 15px; font-weight: 500; }
+    .explanation-page h1 { margin: 0 0 8mm; font-size: 15px; font-weight: 500; }
+    .pdf-top-grid { display: grid; grid-template-columns: 1fr; gap: 3mm; width: 100%; max-width: 100%; }
+    .pdf-room-image img { display: block; width: 52mm; max-width: 100%; height: 30mm; object-fit: contain; }
+    .pdf-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; }
+    .pdf-field { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 2px; min-width: 0; }
+    .pdf-field span { grid-column: 1 / -1; font-size: 9px; overflow-wrap: anywhere; }
+    .pdf-field strong { min-width: 0; width: 100%; height: 15px; padding: 1px 3px; border: 1px solid #111; font-size: 9px; font-weight: 400; line-height: 12px; overflow: hidden; }
+    .pdf-field em { font-size: 9px; font-style: normal; }
+    .calculation-page h2, .pdf-type { margin: 3mm 0 1.5mm; font-size: 12px; font-weight: 400; }
+    .pdf-materials { display: grid; gap: 4px; width: 100%; }
+    .pdf-material-row { background: #d3d3d3; padding: 3mm 3mm 2.5mm; break-inside: avoid; }
+    .pdf-material-top { display: grid; grid-template-columns: minmax(0, 1fr) 16mm; gap: 2mm; align-items: baseline; }
+    .pdf-material-top em { grid-column: 1 / -1; }
+    .pdf-material-top strong { font-size: 10px; font-weight: 700; overflow-wrap: anywhere; }
+    .pdf-material-top span, .pdf-material-top em { font-size: 8.5px; font-style: normal; overflow-wrap: anywhere; }
+    .pdf-coefficients { margin-top: 2mm; padding: 0; }
+    .pdf-coefficient-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8mm 2mm; max-width: 100%; }
+    .pdf-coefficient-grid span { display: grid; grid-template-columns: auto 1fr; gap: 2px; align-items: baseline; min-width: 0; font-size: 8px; line-height: 1.08; }
+    .pdf-coefficient-grid b { font-weight: 500; }
+    .pdf-coefficient-grid em { font-style: normal; }
+    .report-table { width: 100%; max-width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 2mm; }
+    .report-table td, .report-table th { border: 1px solid #d8dce2; padding: 2px; font-size: 6.5px; text-align: center; overflow-wrap: anywhere; }
+    .report-table th { background: #b6d7f5; font-weight: 600; }
+    .report-table td:first-child, .report-table th:first-child { text-align: left; }
+    .chart { display: block; width: 100%; max-width: 100%; height: 30mm; margin: 2mm 0 0; border: 1px solid #d8dce2; }
+    .comparison-summary { margin: 3mm 0; padding: 3mm; background: #eaf8ee; break-inside: avoid; }
+    .comparison-summary.bad { background: #fff4dc; }
+    .comparison-summary.neutral { background: #f0f1f5; }
+    .chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2mm; }
+    .chip { background: #fff; padding: 2mm; font-size: 8px; text-align: center; }
+    .pdf-explainer { display: block; margin-top: 8mm; padding: 4mm; background: #d4d4d4; }
+    .pdf-explainer h2 { font-size: 12px; margin: 0 0 3mm; }
+    .pdf-explainer p { font-size: 10px; line-height: 1.2; margin: 0 0 4mm; }
+  `;
+}
+
 function exportPdf() {
-  buildReport();
-  document.body.classList.add("printing");
-  setTimeout(() => window.print(), 50);
-  setTimeout(() => document.body.classList.remove("printing"), 2000);
+  const markup = buildReportMarkup();
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    document.getElementById("print-report").innerHTML = markup;
+    document.body.classList.add("printing");
+    setTimeout(() => window.print(), 50);
+    setTimeout(() => document.body.classList.remove("printing"), 2000);
+    return;
+  }
+  const baseHref = new URL("./", window.location.href).href;
+  printWindow.document.open();
+  printWindow.document.write(`<!doctype html>
+    <html lang="${state.language}">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <base href="${esc(baseHref)}">
+        <title>${esc(state.language === "en" ? "Acoustics report" : "აკუსტიკის ანგარიში")}</title>
+        <style>${printDocumentCss()}</style>
+      </head>
+      <body>${markup}</body>
+    </html>`);
+  printWindow.document.close();
+  setTimeout(() => {
+    printWindow.focus();
+    printWindow.print();
+  }, 250);
 }
 
 function clearAll() {
