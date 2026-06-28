@@ -704,15 +704,15 @@ td:first-child, th:first-child {
 
 .pdf-material-row {
   background: #cfcfcf;
-  padding: 6px 0 4px;
+  padding: 7px 9px 6px;
 }
 
 .pdf-material-top {
   display: grid;
-  grid-template-columns: 190px 86px 1fr;
+  grid-template-columns: 160px 70px 1fr;
   gap: 12px;
   align-items: baseline;
-  padding: 0 0 0 0;
+  padding: 0;
 }
 
 .pdf-material-top strong {
@@ -727,9 +727,34 @@ td:first-child, th:first-child {
 }
 
 .pdf-coefficients {
-  padding-left: 220px;
-  font-size: 13px;
-  line-height: 1.25;
+  margin-top: 4px;
+  padding-left: 242px;
+}
+
+.pdf-coefficient-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px 6px;
+  max-width: 420px;
+}
+
+.pdf-coefficient-grid span {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px;
+  align-items: baseline;
+  min-width: 0;
+  font-size: 10.5px;
+  line-height: 1.08;
+}
+
+.pdf-coefficient-grid b {
+  font-weight: 500;
+}
+
+.pdf-coefficient-grid em {
+  font-style: normal;
+}
 }
 
 .explanation-page {
@@ -1436,11 +1461,11 @@ td:first-child, th:first-child {
     gap: 4px;
   }
   .pdf-material-row {
-    padding: 4px 0 3px;
+    padding: 3mm 3mm 2.5mm;
   }
   .pdf-material-top {
-    grid-template-columns: 38mm 20mm 1fr;
-    gap: 8px;
+    grid-template-columns: 32mm 17mm 1fr;
+    gap: 3mm;
   }
   .pdf-material-top strong {
     font-size: 12px;
@@ -1450,8 +1475,15 @@ td:first-child, th:first-child {
     font-size: 10px;
   }
   .pdf-coefficients {
-    padding-left: 44mm;
-    font-size: 10px;
+    padding-left: 52mm;
+  }
+  .pdf-coefficient-grid {
+    max-width: 105mm;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1mm 2mm;
+  }
+  .pdf-coefficient-grid span {
+    font-size: 8.5px;
   }
   .report-table {
     font-size: 10px;

@@ -813,11 +813,13 @@ function reportTable(title, values, suffix) {
   </table>`;
 }
 
-function coefficientLine(kind, selection) {
+function coefficientGrid(kind, selection) {
   if (selection < 0) return "";
   const material = materialOptions(kind)[selection];
   if (!material) return "";
-  return expandedCoefficients(material.values).map((value, index) => `${freqs[index]}hz: ${fmt(value)}`).join(" |");
+  return `<div class="pdf-coefficient-grid">${expandedCoefficients(material.values).map((value, index) => `
+    <span><b>${freqs[index]}hz</b><em>${fmt(value)}</em></span>
+  `).join("")}</div>`;
 }
 
 function selectedMaterialName(kind, selection) {
@@ -827,24 +829,24 @@ function selectedMaterialName(kind, selection) {
 
 function reportCalculationRows(c) {
   const rows = [
-    [t("floor"), c.primaryFloor, selectedMaterialName("floor", state.floorSelection), coefficientLine("floor", state.floorSelection)],
-    [t("wall"), c.primaryWall, selectedMaterialName("wall", state.wallSelection), coefficientLine("wall", state.wallSelection)],
-    [t("door"), n(state.doorArea), selectedMaterialName("door", state.doorSelection), coefficientLine("door", state.doorSelection)],
-    [t("window"), n(state.windowArea), selectedMaterialName("window", state.windowSelection), coefficientLine("window", state.windowSelection)],
-    [t("ceiling"), c.effectiveCeiling, selectedMaterialName("ceiling", state.ceilingSelection), coefficientLine("ceiling", state.ceilingSelection)]
+    [t("floor"), c.primaryFloor, selectedMaterialName("floor", state.floorSelection), coefficientGrid("floor", state.floorSelection)],
+    [t("wall"), c.primaryWall, selectedMaterialName("wall", state.wallSelection), coefficientGrid("wall", state.wallSelection)],
+    [t("door"), n(state.doorArea), selectedMaterialName("door", state.doorSelection), coefficientGrid("door", state.doorSelection)],
+    [t("window"), n(state.windowArea), selectedMaterialName("window", state.windowSelection), coefficientGrid("window", state.windowSelection)],
+    [t("ceiling"), c.effectiveCeiling, selectedMaterialName("ceiling", state.ceilingSelection), coefficientGrid("ceiling", state.ceilingSelection)]
   ];
 
   state.extraFloorRows.forEach((row, index) => {
-    if (n(row.area) > 0) rows.push([`${t("extraFloor")} ${index + 1}`, n(row.area), selectedMaterialName("floor", row.selection), coefficientLine("floor", row.selection)]);
+    if (n(row.area) > 0) rows.push([`${t("extraFloor")} ${index + 1}`, n(row.area), selectedMaterialName("floor", row.selection), coefficientGrid("floor", row.selection)]);
   });
   state.extraWallRows.forEach((row, index) => {
-    if (n(row.area) > 0) rows.push([`${t("extraWall")} ${index + 1}`, n(row.area), selectedMaterialName("wall", row.selection), coefficientLine("wall", row.selection)]);
+    if (n(row.area) > 0) rows.push([`${t("extraWall")} ${index + 1}`, n(row.area), selectedMaterialName("wall", row.selection), coefficientGrid("wall", row.selection)]);
   });
   state.extraCeilingRows.forEach((row, index) => {
-    if (n(row.area) > 0) rows.push([`${t("extraCeiling")} ${index + 1}`, n(row.area), selectedMaterialName("ceiling", row.selection), coefficientLine("ceiling", row.selection)]);
+    if (n(row.area) > 0) rows.push([`${t("extraCeiling")} ${index + 1}`, n(row.area), selectedMaterialName("ceiling", row.selection), coefficientGrid("ceiling", row.selection)]);
   });
   state.extraAbsorberRows.forEach((row, index) => {
-    if (n(row.area) > 0) rows.push([`${t("absorbers")} ${index + 1}`, n(row.area), selectedMaterialName("ceiling", row.selection), coefficientLine("ceiling", row.selection)]);
+    if (n(row.area) > 0) rows.push([`${t("absorbers")} ${index + 1}`, n(row.area), selectedMaterialName("ceiling", row.selection), coefficientGrid("ceiling", row.selection)]);
   });
 
   return rows
@@ -856,7 +858,7 @@ function reportCalculationRows(c) {
           <span>${fmt(row[1])} m²</span>
           <em>${esc(row[2])}</em>
         </div>
-        <div class="pdf-coefficients">${esc(row[3] || "")}</div>
+        <div class="pdf-coefficients">${row[3] || ""}</div>
       </div>
     `).join("");
 }
