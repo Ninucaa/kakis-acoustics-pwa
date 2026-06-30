@@ -1,5 +1,5 @@
 const STORAGE_KEY = "kakis-acoustics-pwa-state-v1";
-const APP_VERSION = "32";
+const APP_VERSION = "33";
 const freqs = ["63", "125", "250", "500", "1000", "2000", "4000", "8000"];
 const sourceFreqs = ["125", "250", "500", "1000", "2000", "4000"];
 const shapeAssets = ["shape_flat.png", "shape_vaulted.png", "shape_raked.png", "shape_arbitrary.png"];
@@ -57,8 +57,11 @@ const text = {
     extraWall: "დამატებითი კედლის მასალები",
     extraCeiling: "დამატებითი ჭერის მასალები",
     absorbers: "დამატებითი აბსორბერები",
-    absorberSurface: "აბსორბერები",
-    extraAbsorber: "დამატებითი აბსორბერი",
+    extraFloorAbsorber: "დამატებითი იატაკის აბსორბერი",
+    extraWallAbsorber: "დამატებითი კედლის აბსორბერი",
+    extraDoorAbsorber: "დამატებითი კარის აბსორბერი",
+    extraWindowAbsorber: "დამატებითი ფანჯრის აბსორბერი",
+    extraCeilingAbsorber: "დამატებითი ჭერის აბსორბერი",
     area: "ფართობი",
     comparison: "შედარება",
     comparisonCeiling: "შედარებითი ჭერი",
@@ -140,8 +143,11 @@ const text = {
     extraWall: "Additional wall materials",
     extraCeiling: "Additional ceiling materials",
     absorbers: "Additional absorbers",
-    absorberSurface: "Absorbers",
-    extraAbsorber: "Additional absorber",
+    extraFloorAbsorber: "Additional floor absorber",
+    extraWallAbsorber: "Additional wall absorber",
+    extraDoorAbsorber: "Additional door absorber",
+    extraWindowAbsorber: "Additional window absorber",
+    extraCeilingAbsorber: "Additional ceiling absorber",
     area: "Area",
     comparison: "Comparison",
     comparisonCeiling: "Comparison ceiling",
@@ -196,7 +202,11 @@ const defaults = {
   extraFloorRows: [],
   extraWallRows: [],
   extraCeilingRows: [],
-  extraAbsorberRows: [],
+  floorAbsorberRows: [],
+  wallAbsorberRows: [],
+  doorAbsorberRows: [],
+  windowAbsorberRows: [],
+  ceilingAbsorberRows: [],
   alternativeEnabled: false,
   alternativeCeilingSelection: -1,
   alternativeAbsorberEnabled: true,
@@ -214,7 +224,11 @@ let activePicker = null;
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    return {...defaults, ...saved, customMaterials: saved.customMaterials || {}};
+    const migrated = {...defaults, ...saved, customMaterials: saved.customMaterials || {}};
+    if ((!saved.ceilingAbsorberRows || !saved.ceilingAbsorberRows.length) && saved.extraAbsorberRows?.length) {
+      migrated.ceilingAbsorberRows = saved.extraAbsorberRows;
+    }
+    return migrated;
   } catch {
     return {...defaults};
   }
@@ -426,10 +440,16 @@ function areaIssues() {
   const floorExtra = rowsTotal(state.extraFloorRows);
   const wallExtra = rowsTotal(state.extraWallRows);
   const ceilingExtra = rowsTotal(state.extraCeilingRows);
-  const absorberExtra = rowsTotal(state.extraAbsorberRows);
-  if (floorExtra > floorTotal) issues.push(`${t("extraFloor")}: ${fmt(floorExtra)} / ${fmt(floorTotal)} m²`);
-  if (wallExtra > wallTotal) issues.push(`${t("extraWall")}: ${fmt(wallExtra)} / ${fmt(wallTotal)} m²`);
-  if (ceilingExtra + absorberExtra > ceilingTotal) issues.push(`${t("ceiling")}: ${fmt(ceilingExtra + absorberExtra)} / ${fmt(ceilingTotal)} m²`);
+  const floorAbsorber = rowsTotal(state.floorAbsorberRows);
+  const wallAbsorber = rowsTotal(state.wallAbsorberRows);
+  const doorAbsorber = rowsTotal(state.doorAbsorberRows);
+  const windowAbsorber = rowsTotal(state.windowAbsorberRows);
+  const ceilingAbsorber = rowsTotal(state.ceilingAbsorberRows);
+  if (floorExtra + floorAbsorber > floorTotal) issues.push(`${t("floor")}: ${fmt(floorExtra + floorAbsorber)} / ${fmt(floorTotal)} m²`);
+  if (wallExtra + wallAbsorber > wallTotal) issues.push(`${t("wall")}: ${fmt(wallExtra + wallAbsorber)} / ${fmt(wallTotal)} m²`);
+  if (doorAbsorber > n(state.doorArea)) issues.push(`${t("door")}: ${fmt(doorAbsorber)} / ${fmt(n(state.doorArea))} m²`);
+  if (windowAbsorber > n(state.windowArea)) issues.push(`${t("window")}: ${fmt(windowAbsorber)} / ${fmt(n(state.windowArea))} m²`);
+  if (ceilingExtra + ceilingAbsorber > ceilingTotal) issues.push(`${t("ceiling")}: ${fmt(ceilingExtra + ceilingAbsorber)} / ${fmt(ceilingTotal)} m²`);
   return issues;
 }
 
@@ -472,22 +492,32 @@ function coeff(kind, selection, index, source) {
 function computed() {
   const floorExtra = rowContributions(state.extraFloorRows, floorArea());
   const wallExtra = rowContributions(state.extraWallRows, wallArea());
-  const absorber = rowContributions(state.extraAbsorberRows, ceilingArea());
-  const absorberArea = absorber.reduce((a, r) => a + r.area, 0);
-  const ceilingExtra = rowContributions(state.extraCeilingRows, Math.max(0, ceilingArea() - absorberArea));
-  const primaryFloor = Math.max(0, floorArea() - floorExtra.reduce((a, r) => a + r.area, 0));
-  const primaryWall = Math.max(0, wallArea() - wallExtra.reduce((a, r) => a + r.area, 0));
-  const effectiveCeiling = Math.max(0, ceilingArea() - absorberArea - ceilingExtra.reduce((a, r) => a + r.area, 0));
+  const floorAbsorber = rowContributions(state.floorAbsorberRows, Math.max(0, floorArea() - floorExtra.reduce((a, r) => a + r.area, 0)));
+  const wallAbsorber = rowContributions(state.wallAbsorberRows, Math.max(0, wallArea() - wallExtra.reduce((a, r) => a + r.area, 0)));
+  const doorAbsorber = rowContributions(state.doorAbsorberRows, n(state.doorArea));
+  const windowAbsorber = rowContributions(state.windowAbsorberRows, n(state.windowArea));
+  const ceilingAbsorber = rowContributions(state.ceilingAbsorberRows, ceilingArea());
+  const ceilingAbsorberArea = ceilingAbsorber.reduce((a, r) => a + r.area, 0);
+  const ceilingExtra = rowContributions(state.extraCeilingRows, Math.max(0, ceilingArea() - ceilingAbsorberArea));
+  const primaryFloor = Math.max(0, floorArea() - floorExtra.reduce((a, r) => a + r.area, 0) - floorAbsorber.reduce((a, r) => a + r.area, 0));
+  const primaryWall = Math.max(0, wallArea() - wallExtra.reduce((a, r) => a + r.area, 0) - wallAbsorber.reduce((a, r) => a + r.area, 0));
+  const primaryDoor = Math.max(0, n(state.doorArea) - doorAbsorber.reduce((a, r) => a + r.area, 0));
+  const primaryWindow = Math.max(0, n(state.windowArea) - windowAbsorber.reduce((a, r) => a + r.area, 0));
+  const effectiveCeiling = Math.max(0, ceilingArea() - ceilingAbsorberArea - ceilingExtra.reduce((a, r) => a + r.area, 0));
   const absorption = freqs.map((_, i) => {
     let total = primaryFloor * coeff("floor", state.floorSelection, i, "floorSelection");
     total += primaryWall * coeff("wall", state.wallSelection, i, "wallSelection");
-    total += n(state.doorArea) * coeff("door", state.doorSelection, i, "doorSelection");
-    total += n(state.windowArea) * coeff("window", state.windowSelection, i, "windowSelection");
+    total += primaryDoor * coeff("door", state.doorSelection, i, "doorSelection");
+    total += primaryWindow * coeff("window", state.windowSelection, i, "windowSelection");
     total += effectiveCeiling * coeff("ceiling", state.ceilingSelection, i, "ceilingSelection");
     floorExtra.forEach(r => total += r.area * coeff("floor", r.selection, i, r));
     wallExtra.forEach(r => total += r.area * coeff("wall", r.selection, i, r));
+    floorAbsorber.forEach(r => total += r.area * coeff("floor", r.selection, i, r));
+    wallAbsorber.forEach(r => total += r.area * coeff("wall", r.selection, i, r));
+    doorAbsorber.forEach(r => total += r.area * coeff("door", r.selection, i, r));
+    windowAbsorber.forEach(r => total += r.area * coeff("window", r.selection, i, r));
     ceilingExtra.forEach(r => total += r.area * coeff("ceiling", r.selection, i, r));
-    absorber.forEach(r => total += r.area * coeff("ceiling", r.selection, i, r));
+    ceilingAbsorber.forEach(r => total += r.area * coeff("ceiling", r.selection, i, r));
     return total;
   });
   const reverberation = absorption.map(a => a === 0 ? 0 : Math.max(0.05, 0.16 * volume() / a));
@@ -496,16 +526,20 @@ function computed() {
   const altAbsorption = freqs.map((_, i) => {
     let total = primaryFloor * coeff("floor", state.floorSelection, i, "floorSelection");
     total += primaryWall * coeff("wall", state.wallSelection, i, "wallSelection");
-    total += n(state.doorArea) * coeff("door", state.doorSelection, i, "doorSelection");
-    total += n(state.windowArea) * coeff("window", state.windowSelection, i, "windowSelection");
+    total += primaryDoor * coeff("door", state.doorSelection, i, "doorSelection");
+    total += primaryWindow * coeff("window", state.windowSelection, i, "windowSelection");
     total += altEffectiveCeiling * coeff("ceiling", state.alternativeCeilingSelection, i, "alternativeCeilingSelection");
     total += altAbsorberArea * coeff("ceiling", state.alternativeAbsorberSelection, i, "alternativeAbsorberSelection");
     floorExtra.forEach(r => total += r.area * coeff("floor", r.selection, i, r));
     wallExtra.forEach(r => total += r.area * coeff("wall", r.selection, i, r));
+    floorAbsorber.forEach(r => total += r.area * coeff("floor", r.selection, i, r));
+    wallAbsorber.forEach(r => total += r.area * coeff("wall", r.selection, i, r));
+    doorAbsorber.forEach(r => total += r.area * coeff("door", r.selection, i, r));
+    windowAbsorber.forEach(r => total += r.area * coeff("window", r.selection, i, r));
     return total;
   });
   const altReverberation = altAbsorption.map(a => a === 0 ? 0 : Math.max(0.05, 0.16 * volume() / a));
-  return {primaryFloor, primaryWall, effectiveCeiling, absorption, reverberation, altAbsorption, altReverberation, altEffectiveCeiling, altAbsorberArea};
+  return {primaryFloor, primaryWall, primaryDoor, primaryWindow, effectiveCeiling, absorption, reverberation, altAbsorption, altReverberation, altEffectiveCeiling, altAbsorberArea};
 }
 
 function setState(key, value) {
@@ -683,19 +717,20 @@ function addExtraRow(key) {
   setState(key, state[key]);
 }
 
-function renderMaterialBlock(title, kind, key, area, extraTitle, rowsKey, areaKey) {
+function renderMaterialBlock(title, kind, key, area, extraTitle, rowsKey, areaKey, absorberTitle, absorberRowsKey) {
   const block = document.createElement("div");
   block.className = "material-block";
   const row = document.createElement("div");
   row.className = "material-row";
-  const titleEl = document.createElement(rowsKey ? "button" : "div");
+  const primaryRowsKey = rowsKey || absorberRowsKey;
+  const titleEl = document.createElement(primaryRowsKey ? "button" : "div");
   titleEl.className = "material-title";
-  if (rowsKey) {
+  if (primaryRowsKey) {
     titleEl.type = "button";
     titleEl.classList.add("title-action");
     titleEl.onclick = event => {
       event.preventDefault();
-      addExtraRow(rowsKey);
+      addExtraRow(primaryRowsKey);
     };
   }
   titleEl.innerHTML = `<span aria-hidden="true">+</span><strong>${esc(title)}</strong>`;
@@ -705,16 +740,32 @@ function renderMaterialBlock(title, kind, key, area, extraTitle, rowsKey, areaKe
   areaEl.textContent = `${fmt(area)} m²`;
   const picker = materialPickerButton(kind, state[key], value => setState(key, value), key);
   row.append(titleEl, areaEl, picker);
-  if (rowsKey) {
-    const add = document.createElement("button");
-    add.type = "button";
-    add.className = "inline-add-btn";
-    add.innerHTML = `<span aria-hidden="true">+</span><strong>${esc(extraTitle)}</strong>`;
-    add.onclick = event => {
-      event.preventDefault();
-      addExtraRow(rowsKey);
-    };
-    row.appendChild(add);
+  if (rowsKey || absorberRowsKey) {
+    const actions = document.createElement("div");
+    actions.className = "row-actions";
+    if (rowsKey) {
+      const add = document.createElement("button");
+      add.type = "button";
+      add.className = "inline-add-btn";
+      add.innerHTML = `<span aria-hidden="true">+</span><strong>${esc(extraTitle)}</strong>`;
+      add.onclick = event => {
+        event.preventDefault();
+        addExtraRow(rowsKey);
+      };
+      actions.appendChild(add);
+    }
+    if (absorberRowsKey) {
+      const addAbsorber = document.createElement("button");
+      addAbsorber.type = "button";
+      addAbsorber.className = "inline-add-btn";
+      addAbsorber.innerHTML = `<span aria-hidden="true">+</span><strong>${esc(absorberTitle)}</strong>`;
+      addAbsorber.onclick = event => {
+        event.preventDefault();
+        addExtraRow(absorberRowsKey);
+      };
+      actions.appendChild(addAbsorber);
+    }
+    row.appendChild(actions);
   } else {
     const spacer = document.createElement("div");
     spacer.className = "material-row-spacer";
@@ -724,6 +775,7 @@ function renderMaterialBlock(title, kind, key, area, extraTitle, rowsKey, areaKe
   const customEditor = renderInlineCustomEditor(kind, state[key], key);
   if (customEditor) block.appendChild(customEditor);
   if (rowsKey) block.appendChild(extraRows(extraTitle, kind, rowsKey));
+  if (absorberRowsKey) block.appendChild(extraRows(absorberTitle, kind, absorberRowsKey));
   return block;
 }
 
@@ -776,48 +828,22 @@ function extraRows(title, kind, key) {
   return wrap;
 }
 
-function renderExtraOnlyBlock(title, addLabel, kind, key) {
-  const block = document.createElement("div");
-  block.className = "material-block";
-  const row = document.createElement("div");
-  row.className = "material-row";
-  const titleEl = document.createElement("div");
-  titleEl.className = "material-title no-icon";
-  titleEl.innerHTML = `<strong>${esc(title)}</strong>`;
-  const spacerA = document.createElement("div");
-  spacerA.className = "material-row-spacer";
-  const spacerB = document.createElement("div");
-  spacerB.className = "material-row-spacer";
-  const add = document.createElement("button");
-  add.type = "button";
-  add.className = "inline-add-btn";
-  add.innerHTML = `<span aria-hidden="true">+</span><strong>${esc(addLabel)}</strong>`;
-  add.onclick = event => {
-    event.preventDefault();
-    addExtraRow(key);
-  };
-  row.append(titleEl, spacerA, spacerB, add);
-  block.append(row, extraRows(title, kind, key));
-  return block;
-}
-
 function renderMaterials() {
   const c = computed();
   const box = document.getElementById("material-sections");
   box.innerHTML = "";
-  box.appendChild(renderMaterialBlock(t("floor"), "floor", "floorSelection", c.primaryFloor, t("extraFloor"), "extraFloorRows", "primaryFloor"));
-  box.appendChild(renderMaterialBlock(t("wall"), "wall", "wallSelection", c.primaryWall, t("extraWall"), "extraWallRows", "primaryWall"));
-  box.appendChild(renderMaterialBlock(t("door"), "door", "doorSelection", n(state.doorArea), null, null, "door"));
-  box.appendChild(renderMaterialBlock(t("window"), "window", "windowSelection", n(state.windowArea), null, null, "window"));
-  box.appendChild(renderMaterialBlock(t("ceiling"), "ceiling", "ceilingSelection", c.effectiveCeiling, t("extraCeiling"), "extraCeilingRows", "effectiveCeiling"));
-  box.appendChild(renderExtraOnlyBlock(t("absorberSurface"), t("extraAbsorber"), "ceiling", "extraAbsorberRows"));
+  box.appendChild(renderMaterialBlock(t("floor"), "floor", "floorSelection", c.primaryFloor, t("extraFloor"), "extraFloorRows", "primaryFloor", t("extraFloorAbsorber"), "floorAbsorberRows"));
+  box.appendChild(renderMaterialBlock(t("wall"), "wall", "wallSelection", c.primaryWall, t("extraWall"), "extraWallRows", "primaryWall", t("extraWallAbsorber"), "wallAbsorberRows"));
+  box.appendChild(renderMaterialBlock(t("door"), "door", "doorSelection", c.primaryDoor, null, null, "door", t("extraDoorAbsorber"), "doorAbsorberRows"));
+  box.appendChild(renderMaterialBlock(t("window"), "window", "windowSelection", c.primaryWindow, null, null, "window", t("extraWindowAbsorber"), "windowAbsorberRows"));
+  box.appendChild(renderMaterialBlock(t("ceiling"), "ceiling", "ceilingSelection", c.effectiveCeiling, t("extraCeiling"), "extraCeilingRows", "effectiveCeiling", t("extraCeilingAbsorber"), "ceilingAbsorberRows"));
   renderCoefficients();
 }
 
 function renderCoefficients() {
   const rows = [];
   if (state.ceilingSelection >= 0) rows.push([t("ceiling"), expandedCoefficients(materialAt("ceiling", state.ceilingSelection, "ceilingSelection")?.values || [])]);
-  state.extraAbsorberRows.forEach((r, i) => {
+  state.ceilingAbsorberRows.forEach((r, i) => {
     if (r.selection >= 0) rows.push([`${t("absorbers")} ${i + 1}`, expandedCoefficients(materialAt("ceiling", r.selection, r)?.values || [])]);
   });
   document.getElementById("coefficients-table").innerHTML = rows.length ? rows.map(([name, values]) => `
@@ -861,8 +887,16 @@ function missingMaterials(c) {
   state.extraCeilingRows.forEach((row, index) => {
     if (n(row.area) > 0 && Number(row.selection) < 0) missing.push(`${t("extraCeiling")} ${index + 1}`);
   });
-  state.extraAbsorberRows.forEach((row, index) => {
-    if (n(row.area) > 0 && Number(row.selection) < 0) missing.push(`${t("absorbers")} ${index + 1}`);
+  [
+    [state.floorAbsorberRows, t("extraFloorAbsorber")],
+    [state.wallAbsorberRows, t("extraWallAbsorber")],
+    [state.doorAbsorberRows, t("extraDoorAbsorber")],
+    [state.windowAbsorberRows, t("extraWindowAbsorber")],
+    [state.ceilingAbsorberRows, t("extraCeilingAbsorber")]
+  ].forEach(([rows, label]) => {
+    rows.forEach((row, index) => {
+      if (n(row.area) > 0 && Number(row.selection) < 0) missing.push(`${label} ${index + 1}`);
+    });
   });
   if (state.alternativeEnabled && c.altEffectiveCeiling > 0 && state.alternativeCeilingSelection < 0) missing.push(t("comparisonCeiling"));
   if (state.alternativeEnabled && state.alternativeAbsorberEnabled && c.altAbsorberArea > 0 && state.alternativeAbsorberSelection < 0) missing.push(t("comparisonAbsorber"));
@@ -877,7 +911,7 @@ function renderComputedOnly() {
   document.getElementById("volume").textContent = `${fmt(volume())} m³`;
   document.querySelectorAll("[data-area]").forEach(el => {
     const key = el.dataset.area;
-    const value = key === "door" ? n(state.doorArea) : key === "window" ? n(state.windowArea) : c[key];
+    const value = key === "door" ? c.primaryDoor : key === "window" ? c.primaryWindow : c[key];
     el.textContent = `${fmt(value)} m²`;
   });
   const warning = document.getElementById("warning");
@@ -986,8 +1020,8 @@ function reportCalculationRows(c) {
   const rows = [
     [t("floor"), c.primaryFloor, selectedMaterialName("floor", state.floorSelection, "floorSelection"), coefficientGrid("floor", state.floorSelection, "floorSelection")],
     [t("wall"), c.primaryWall, selectedMaterialName("wall", state.wallSelection, "wallSelection"), coefficientGrid("wall", state.wallSelection, "wallSelection")],
-    [t("door"), n(state.doorArea), selectedMaterialName("door", state.doorSelection, "doorSelection"), coefficientGrid("door", state.doorSelection, "doorSelection")],
-    [t("window"), n(state.windowArea), selectedMaterialName("window", state.windowSelection, "windowSelection"), coefficientGrid("window", state.windowSelection, "windowSelection")],
+    [t("door"), c.primaryDoor, selectedMaterialName("door", state.doorSelection, "doorSelection"), coefficientGrid("door", state.doorSelection, "doorSelection")],
+    [t("window"), c.primaryWindow, selectedMaterialName("window", state.windowSelection, "windowSelection"), coefficientGrid("window", state.windowSelection, "windowSelection")],
     [t("ceiling"), c.effectiveCeiling, selectedMaterialName("ceiling", state.ceilingSelection, "ceilingSelection"), coefficientGrid("ceiling", state.ceilingSelection, "ceilingSelection")]
   ];
 
@@ -1000,8 +1034,16 @@ function reportCalculationRows(c) {
   state.extraCeilingRows.forEach((row, index) => {
     if (n(row.area) > 0) rows.push([`${t("extraCeiling")} ${index + 1}`, n(row.area), selectedMaterialName("ceiling", row.selection, row), coefficientGrid("ceiling", row.selection, row)]);
   });
-  state.extraAbsorberRows.forEach((row, index) => {
-    if (n(row.area) > 0) rows.push([`${t("absorbers")} ${index + 1}`, n(row.area), selectedMaterialName("ceiling", row.selection, row), coefficientGrid("ceiling", row.selection, row)]);
+  [
+    [state.floorAbsorberRows, t("extraFloorAbsorber"), "floor"],
+    [state.wallAbsorberRows, t("extraWallAbsorber"), "wall"],
+    [state.doorAbsorberRows, t("extraDoorAbsorber"), "door"],
+    [state.windowAbsorberRows, t("extraWindowAbsorber"), "window"],
+    [state.ceilingAbsorberRows, t("extraCeilingAbsorber"), "ceiling"]
+  ].forEach(([absorberRows, label, kind]) => {
+    absorberRows.forEach((row, index) => {
+      if (n(row.area) > 0) rows.push([`${label} ${index + 1}`, n(row.area), selectedMaterialName(kind, row.selection, row), coefficientGrid(kind, row.selection, row)]);
+    });
   });
 
   return rows

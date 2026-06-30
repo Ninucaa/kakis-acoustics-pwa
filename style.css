@@ -507,6 +507,12 @@ button.material-title:focus-visible {
   cursor: pointer;
 }
 
+.row-actions {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
 .inline-add-btn span {
   color: var(--accent);
   font-size: 23px;
@@ -1347,6 +1353,7 @@ td:first-child, th:first-child {
   }
 
   .inline-add-btn,
+  .row-actions,
   .material-row-spacer,
   .remove-btn {
     grid-column: 1 / -1;
