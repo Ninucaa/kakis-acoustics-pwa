@@ -1,5 +1,5 @@
 const STORAGE_KEY = "kakis-acoustics-pwa-state-v1";
-const APP_VERSION = "33";
+const APP_VERSION = "34";
 const freqs = ["63", "125", "250", "500", "1000", "2000", "4000", "8000"];
 const sourceFreqs = ["125", "250", "500", "1000", "2000", "4000"];
 const shapeAssets = ["shape_flat.png", "shape_vaulted.png", "shape_raked.png", "shape_arbitrary.png"];
@@ -722,15 +722,14 @@ function renderMaterialBlock(title, kind, key, area, extraTitle, rowsKey, areaKe
   block.className = "material-block";
   const row = document.createElement("div");
   row.className = "material-row";
-  const primaryRowsKey = rowsKey || absorberRowsKey;
-  const titleEl = document.createElement(primaryRowsKey ? "button" : "div");
+  const titleEl = document.createElement(rowsKey ? "button" : "div");
   titleEl.className = "material-title";
-  if (primaryRowsKey) {
+  if (rowsKey) {
     titleEl.type = "button";
     titleEl.classList.add("title-action");
     titleEl.onclick = event => {
       event.preventDefault();
-      addExtraRow(primaryRowsKey);
+      addExtraRow(rowsKey);
     };
   }
   titleEl.innerHTML = `<span aria-hidden="true">+</span><strong>${esc(title)}</strong>`;
@@ -740,31 +739,18 @@ function renderMaterialBlock(title, kind, key, area, extraTitle, rowsKey, areaKe
   areaEl.textContent = `${fmt(area)} m²`;
   const picker = materialPickerButton(kind, state[key], value => setState(key, value), key);
   row.append(titleEl, areaEl, picker);
-  if (rowsKey || absorberRowsKey) {
+  if (absorberRowsKey) {
     const actions = document.createElement("div");
     actions.className = "row-actions";
-    if (rowsKey) {
-      const add = document.createElement("button");
-      add.type = "button";
-      add.className = "inline-add-btn";
-      add.innerHTML = `<span aria-hidden="true">+</span><strong>${esc(extraTitle)}</strong>`;
-      add.onclick = event => {
-        event.preventDefault();
-        addExtraRow(rowsKey);
-      };
-      actions.appendChild(add);
-    }
-    if (absorberRowsKey) {
-      const addAbsorber = document.createElement("button");
-      addAbsorber.type = "button";
-      addAbsorber.className = "inline-add-btn";
-      addAbsorber.innerHTML = `<span aria-hidden="true">+</span><strong>${esc(absorberTitle)}</strong>`;
-      addAbsorber.onclick = event => {
-        event.preventDefault();
-        addExtraRow(absorberRowsKey);
-      };
-      actions.appendChild(addAbsorber);
-    }
+    const addAbsorber = document.createElement("button");
+    addAbsorber.type = "button";
+    addAbsorber.className = "inline-add-btn";
+    addAbsorber.innerHTML = `<span aria-hidden="true">+</span><strong>${esc(absorberTitle)}</strong>`;
+    addAbsorber.onclick = event => {
+      event.preventDefault();
+      addExtraRow(absorberRowsKey);
+    };
+    actions.appendChild(addAbsorber);
     row.appendChild(actions);
   } else {
     const spacer = document.createElement("div");
