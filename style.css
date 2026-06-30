@@ -350,28 +350,63 @@ input:focus, select:focus {
 
 .material-block {
   display: grid;
-  gap: 10px;
-  padding: 14px 0;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.material-block + .material-block {
+  margin-top: 10px;
+}
+
+.material-row,
+.extra-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(88px, 110px) minmax(190px, 1.7fr) minmax(140px, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 12px;
   border-bottom: 1px solid var(--line);
 }
 
-.material-row {
-  grid-template-columns: minmax(0, 1fr) 82px;
+.material-block > .material-row:last-child,
+.extra-list > .extra-row:last-child {
+  border-bottom: 0;
 }
 
-.material-row label {
+.material-title {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
   gap: 8px;
-  font-weight: 500;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.material-title span {
+  color: var(--accent);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.material-title strong {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
+.extra-title span {
+  color: var(--danger);
+}
+
 .area {
-  align-self: end;
+  align-self: center;
   text-align: right;
   font-weight: 400;
-  padding-bottom: 11px;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .material-picker {
@@ -405,16 +440,13 @@ input:focus, select:focus {
   transform: rotate(90deg);
 }
 
-.extra-list {
+.extra-panel {
   display: grid;
-  gap: 10px;
+  background: #fbfcfd;
 }
 
-.extra-row {
+.extra-list {
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr) 38px;
-  gap: 10px;
-  align-items: center;
 }
 
 .extra-row input {
@@ -434,7 +466,40 @@ input:focus, select:focus {
 }
 
 .extra-list .custom-editor {
-  margin-top: -2px;
+  border-radius: 0;
+  border-width: 0 0 1px;
+}
+
+.inline-add-btn {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--accent-dark);
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inline-add-btn span {
+  color: var(--accent);
+  font-size: 23px;
+  line-height: 1;
+}
+
+.inline-add-btn strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+.material-row-spacer {
+  min-height: 1px;
 }
 
 .custom-description {
@@ -1221,30 +1286,35 @@ td:first-child, th:first-child {
     gap: 6px;
   }
 
-  .material-row {
-    grid-template-columns: 1fr auto;
-    gap: 8px 12px;
-    align-items: start;
-    min-width: 0;
+  .material-block {
+    border-radius: 8px;
   }
 
-  .material-row label {
-    grid-column: 1 / -1;
+  .material-row,
+  .extra-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 9px 10px;
+    padding: 11px 10px;
   }
 
-  .material-row .area {
-    grid-column: 1 / -1;
-    justify-self: start;
-    font-size: 13px;
+  .material-title {
+    grid-column: 1 / 2;
+  }
+
+  .area,
+  .extra-row > input {
+    grid-column: 2 / 3;
+    justify-self: end;
+    min-width: 92px;
   }
 
   .area {
-    text-align: left;
-    padding-bottom: 0;
+    text-align: right;
+    font-size: 13px;
   }
 
-  .material-block {
-    padding: 12px 0;
+  .material-picker {
+    grid-column: 1 / -1;
   }
 
   .material-picker {
@@ -1255,13 +1325,32 @@ td:first-child, th:first-child {
     padding-right: 10px;
   }
 
+  .inline-add-btn,
+  .material-row-spacer,
+  .remove-btn {
+    grid-column: 1 / -1;
+  }
+
+  .material-row-spacer {
+    display: none;
+  }
+
+  .inline-add-btn {
+    min-height: 38px;
+    padding: 0;
+  }
+
+  .remove-btn {
+    justify-self: start;
+  }
+
   .field {
     font-size: 13.5px;
     min-width: 0;
   }
 
   .field > span,
-  .material-row label,
+  .material-title,
   .metrics span,
   .manual-list li {
     overflow-wrap: anywhere;
@@ -1292,7 +1381,7 @@ td:first-child, th:first-child {
   }
 
   .comparison-panel .material-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .table-wrap {
@@ -1381,10 +1470,6 @@ td:first-child, th:first-child {
 
   .metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .material-row {
-    grid-template-columns: minmax(0, 1fr) 96px;
   }
 
   .comparison-panel {
@@ -1602,17 +1687,17 @@ td:first-child, th:first-child {
 
 @media (max-width: 560px) {
   .extra-row {
-    grid-template-columns: minmax(0, 1fr) 38px;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px 10px;
-    padding: 4px 0;
+    padding: 11px 10px;
   }
 
   .extra-row input {
-    grid-column: 1;
+    grid-column: 2;
   }
 
   .extra-row .remove-btn {
-    grid-column: 2;
+    grid-column: 1 / -1;
   }
 
   .extra-row .material-picker {

@@ -1,5 +1,5 @@
 const STORAGE_KEY = "kakis-acoustics-pwa-state-v1";
-const APP_VERSION = "29";
+const APP_VERSION = "30";
 const freqs = ["63", "125", "250", "500", "1000", "2000", "4000", "8000"];
 const sourceFreqs = ["125", "250", "500", "1000", "2000", "4000"];
 const shapeAssets = ["shape_flat.png", "shape_vaulted.png", "shape_raked.png", "shape_arbitrary.png"];
@@ -650,19 +650,41 @@ function renderInlineCustomEditor(kind, selection, source) {
   return editor;
 }
 
+function addExtraRow(key) {
+  setPanelOpen(key, true);
+  state[key].push({area: "", selection: -1});
+  setState(key, state[key]);
+}
+
 function renderMaterialBlock(title, kind, key, area, extraTitle, rowsKey, areaKey) {
   const block = document.createElement("div");
   block.className = "material-block";
   const row = document.createElement("div");
   row.className = "material-row";
-  const label = document.createElement("label");
-  label.textContent = title;
-  label.appendChild(materialPickerButton(kind, state[key], value => setState(key, value), key));
+  const titleEl = document.createElement("div");
+  titleEl.className = "material-title";
+  titleEl.innerHTML = `<span aria-hidden="true">+</span><strong>${esc(title)}</strong>`;
   const areaEl = document.createElement("div");
   areaEl.className = "area";
   if (areaKey) areaEl.dataset.area = areaKey;
   areaEl.textContent = `${fmt(area)} m²`;
-  row.append(label, areaEl);
+  const picker = materialPickerButton(kind, state[key], value => setState(key, value), key);
+  row.append(titleEl, areaEl, picker);
+  if (rowsKey) {
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "inline-add-btn";
+    add.innerHTML = `<span aria-hidden="true">+</span><strong>${esc(extraTitle)}</strong>`;
+    add.onclick = event => {
+      event.preventDefault();
+      addExtraRow(rowsKey);
+    };
+    row.appendChild(add);
+  } else {
+    const spacer = document.createElement("div");
+    spacer.className = "material-row-spacer";
+    row.appendChild(spacer);
+  }
   block.appendChild(row);
   const customEditor = renderInlineCustomEditor(kind, state[key], key);
   if (customEditor) block.appendChild(customEditor);
@@ -671,18 +693,17 @@ function renderMaterialBlock(title, kind, key, area, extraTitle, rowsKey, areaKe
 }
 
 function extraRows(title, kind, key) {
-  const wrap = document.createElement("details");
-  wrap.className = "subpanel";
-  wrap.open = (state.openExtraPanels || []).includes(key);
-  wrap.addEventListener("toggle", () => setPanelOpen(key, wrap.open));
-  const summary = document.createElement("summary");
-  summary.textContent = title;
-  wrap.appendChild(summary);
+  const wrap = document.createElement("div");
+  wrap.className = "extra-panel";
+  wrap.classList.toggle("hidden", !(state.openExtraPanels || []).includes(key) && state[key].length === 0);
   const list = document.createElement("div");
   list.className = "extra-list";
   state[key].forEach((item, index) => {
     const row = document.createElement("div");
     row.className = "extra-row";
+    const titleEl = document.createElement("div");
+    titleEl.className = "material-title extra-title";
+    titleEl.innerHTML = `<span aria-hidden="true">×</span><strong>${esc(title)}</strong>`;
     const area = document.createElement("input");
     area.inputMode = "decimal";
     area.placeholder = "m²";
@@ -705,24 +726,38 @@ function extraRows(title, kind, key) {
       state[key].splice(index, 1);
       setState(key, state[key]);
     };
-    row.append(area, select, remove);
+    row.append(titleEl, area, select, remove);
     list.appendChild(row);
     const customEditor = renderInlineCustomEditor(kind, Number(item.selection ?? -1), item);
     if (customEditor) list.appendChild(customEditor);
   });
+  wrap.append(list);
+  return wrap;
+}
+
+function renderExtraOnlyBlock(title, kind, key) {
+  const block = document.createElement("div");
+  block.className = "material-block";
+  const row = document.createElement("div");
+  row.className = "material-row";
+  const titleEl = document.createElement("div");
+  titleEl.className = "material-title";
+  titleEl.innerHTML = `<span aria-hidden="true">+</span><strong>${esc(title)}</strong>`;
+  const spacerA = document.createElement("div");
+  spacerA.className = "material-row-spacer";
+  const spacerB = document.createElement("div");
+  spacerB.className = "material-row-spacer";
   const add = document.createElement("button");
   add.type = "button";
-  add.className = "small-btn";
-  add.textContent = t("add");
+  add.className = "inline-add-btn";
+  add.innerHTML = `<span aria-hidden="true">+</span><strong>${esc(t("add"))}</strong>`;
   add.onclick = event => {
     event.preventDefault();
-    event.stopPropagation();
-    setPanelOpen(key, true);
-    state[key].push({area: "", selection: -1});
-    setState(key, state[key]);
+    addExtraRow(key);
   };
-  wrap.append(list, add);
-  return wrap;
+  row.append(titleEl, spacerA, spacerB, add);
+  block.append(row, extraRows(title, kind, key));
+  return block;
 }
 
 function renderMaterials() {
@@ -734,7 +769,7 @@ function renderMaterials() {
   box.appendChild(renderMaterialBlock(t("door"), "door", "doorSelection", n(state.doorArea), null, null, "door"));
   box.appendChild(renderMaterialBlock(t("window"), "window", "windowSelection", n(state.windowArea), null, null, "window"));
   box.appendChild(renderMaterialBlock(t("ceiling"), "ceiling", "ceilingSelection", c.effectiveCeiling, t("extraCeiling"), "extraCeilingRows", "effectiveCeiling"));
-  box.appendChild(extraRows(t("absorbers"), "ceiling", "extraAbsorberRows"));
+  box.appendChild(renderExtraOnlyBlock(t("absorbers"), "ceiling", "extraAbsorberRows"));
   renderCoefficients();
 }
 
