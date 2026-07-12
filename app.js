@@ -1,5 +1,5 @@
 const STORAGE_KEY = "kakis-acoustics-pwa-state-v1";
-const APP_VERSION = "53";
+const APP_VERSION = "54";
 const freqs = ["63", "125", "250", "500", "1000", "2000", "4000", "8000"];
 const sourceFreqs = ["125", "250", "500", "1000", "2000", "4000"];
 const shapeAssets = ["shape_flat.png", "shape_vaulted.png", "shape_raked.png", "shape_arbitrary.png"];
@@ -356,7 +356,16 @@ function customData(source) {
 
 function materialAt(kind, selection, source) {
   if (selection < 0) return null;
-  return materialOptions(kind)[selection] || null;
+  const material = materialOptions(kind)[selection] || null;
+  if (material?.custom) {
+    const data = customData(source);
+    return {
+      ...material,
+      name: data.name || material.name,
+      values: data.values || emptyCustomValues()
+    };
+  }
+  return material;
 }
 
 function average(values) {
